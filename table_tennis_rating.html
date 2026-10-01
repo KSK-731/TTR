@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>卓球レーティングシステム</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏓</text></svg>">
+    <style>
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 0;
+            color: #1a1a1a;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        .tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 2rem;
+        }
+        .tab-button {
+            padding: 12px 24px;
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .tab-button:hover {
+            color: #333;
+        }
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        h2 {
+            font-size: 20px;
+            color: #333;
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input, select {
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 100%;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .form-full {
+            grid-column: 1 / -1;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+        }
+        .button-primary {
+            background: #667eea;
+            color: white;
+        }
+        .button-primary:hover {
+            background: #5568d3;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .button-primary:active {
+            transform: scale(0.98);
+        }
+        
+        .error {
+            color: #e53935;
+            font-size: 13px;
+            margin-top: 6px;
+            min-height: 18px;
+        }
+        .success {
+            color: #43a047;
+            font-weight: 500;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #f0f0f0;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .ranking-table th {
+            background: #f9f9f9;
+            color: #666;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 16px;
+            text-align: left;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .ranking-table td {
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        .ranking-table tr:hover {
+            background: #fafafa;
+        }
+        .ranking-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+            margin-right: 8px;
+        }
+        .rank-1 { background: linear-gradient(135deg, #ffd700, #ffed4e); color: #8b6914; }
+        .rank-2 { background: linear-gradient(135deg, #c0c0c0, #e8e8e8); color: #666; }
+        .rank-3 { background: linear-gradient(135deg, #cd7f32, #e8a563); color: #fff; }
+        .rank-other { background: #667eea; }
+        
+        .player-name {
+            display: flex;
+            align-items: center;
+        }
+        .medal { margin-right: 8px; font-size: 18px; }
+        
+        .rating-value {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 15px;
+        }
+        
+        .rating-change {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .rating-up { color: #43a047; }
+        .rating-down { color: #e53935; }
+        
+        .match-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .match-item {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .match-score {
+            font-weight: 700;
+            color: #333;
+            font-size: 15px;
+        }
+        .match-time {
+            font-size: 12px;
+            color: #999;
+        }
+        .match-details {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #999;
+        }
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 24px;
+            }
+            .container {
+                padding: 1rem;
+            }
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .tabs {
+                overflow-x: auto;
+            }
+            .tab-button {
+                padding: 12px 16px;
+                font-size: 13px;
+            }
+            .ranking-table th, .ranking-table td {
+                padding: 12px;
+                font-size: 13px;
+            }
+            .stat-value {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏓 卓球レーティングシステム</h1>
+    </div>
+    
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('matches')">📝 試合記録</button>
+            <button class="tab-button" onclick="switchTab('ranking')">📊 ランキング</button>
+            <button class="tab-button" onclick="switchTab('history')">📜 履歴</button>
+        </div>
+
+        <!-- 試合記録タブ -->
+        <div id="matches-tab" class="tab-content active">
+            <h2>試合結果を記録</h2>
+            <div class="form-group">
+                <label>選手1の名前</label>
+                <input type="text" id="player1" placeholder="例：太郎" autocomplete="off">
+                <div class="error" id="error1"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>選手1のスコア（セット数）</label>
+                    <input type="number" id="score1" placeholder="例：3" autocomplete="off" min="0">
+                </div>
+                <div class="form-group">
+                    <label>選手2のスコア（セット数）</label>
+                    <input type="number" id="score2" placeholder="例：1" autocomplete="off" min="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>選手2の名前</label>
+                <input type="text" id="player2" placeholder="例：次郎" autocomplete="off">
+                <div class="error" id="error2"></div>
+            </div>
+            <button class="button-primary form-full" onclick="recordMatch()">試合を記録</button>
+            <div class="error" id="errorGeneral"></div>
+        </div>
+
+        <!-- ランキングタブ -->
+        <div id="ranking-tab" class="tab-content">
+            <h2>現在のランキング</h2>
+            <div class="stats" id="stats"></div>
+            <div id="ranking-container">
+                <table class="ranking-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">順位</th>
+                            <th>選手</th>
+                            <th style="text-align: right;">レート</th>
+                            <th style="text-align: center;">試合</th>
+                            <th style="text-align: center;">勝率</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ranking-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 履歴タブ -->
+        <div id="history-tab" class="tab-content">
+            <h2>試合履歴</h2>
+            <div class="match-list" id="match-list"></div>
+        </div>
+    </div>
+
+    <script>
+        // ローカルストレージからデータを取得
+        function loadData() {
+            try {
+                const data = localStorage.getItem('tabletennis_data');
+                return data ? JSON.parse(data) : { players: {}, matches: [] };
+            } catch {
+                return { players: {}, matches: [] };
+            }
+        }
+
+        // ローカルストレージにデータを保存
+        function saveData(data) {
+            try {
+                localStorage.setItem('tabletennis_data', JSON.stringify(data));
+            } catch (e) {
+                console.error('データ保存エラー:', e);
+            }
+        }
+
+        // タブを切り替え
+        function switchTab(tab) {
+            // すべてのタブを非表示
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            
+            // 選択されたタブを表示
+            document.getElementById(tab + '-tab').classList.add('active');
+            event.target.classList.add('active');
+            
+            // タブごとの処理
+            if (tab === 'ranking') updateRanking();
+            else if (tab === 'history') updateHistory();
+        }
+
+        // ELO式でレートを計算
+        function calculateELO(ratingA, ratingB, resultA, K = 32) {
+            const EA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+            const EB = 1 / (1 + Math.pow(10, (ratingA - ratingB) / 400));
+            
+            const newRatingA = ratingA + K * (resultA - EA);
+            const newRatingB = ratingB + K * ((1 - resultA) - EB);
+            
+            return {
+                newRatingA: Math.round(newRatingA),
+                newRatingB: Math.round(newRatingB)
+            };
+        }
+
+        // 試合を記録
+        function recordMatch() {
+            const player1 = document.getElementById('player1').value.trim();
+            const player2 = document.getElementById('player2').value.trim();
+            const score1 = document.getElementById('score1').value.trim();
+            const score2 = document.getElementById('score2').value.trim();
+            
+            // エラーをクリア
+            document.getElementById('error1').textContent = '';
+            document.getElementById('error2').textContent = '';
+            document.getElementById('errorGeneral').textContent = '';
+            
+            // バリデーション
+            if (!player1) {
+                document.getElementById('error1').textContent = '選手1の名前を入力してください';
+                return;
+            }
+            if (!player2) {
+                document.getElementById('error2').textContent = '選手2の名前を入力してください';
+                return;
+            }
+            if (!score1 || !score2) {
+                document.getElementById('errorGeneral').textContent = 'スコアを入力してください';
+                return;
+            }
+            if (player1 === player2) {
+                document.getElementById('errorGeneral').textContent = '異なる選手を選択してください';
+                return;
+            }
+            
+            const s1 = parseInt(score1);
+            const s2 = parseInt(score2);
+            
+            if (isNaN(s1) || isNaN(s2)) {
+                document.getElementById('errorGeneral').textContent = 'スコアは数値で入力してください';
+                return;
+            }
+            if (s1 < 0 || s2 < 0) {
+                document.getElementById('errorGeneral').textContent = 'スコアは0以上の数値を入力してください';
+                return;
+            }
+            if (s1 === s2) {
+                document.getElementById('errorGeneral').textContent = '勝敗がある結果を入力してください';
+                return;
+            }
+            
+            // データ取得
+            let data = loadData();
+            
+            // プレイヤーを初期化
+            if (!data.players[player1]) {
+                data.players[player1] = { rating: 1500, wins: 0, losses: 0 };
+            }
+            if (!data.players[player2]) {
+                data.players[player2] = { rating: 1500, wins: 0, losses: 0 };
+            }
+            
+            // 勝敗を判定
+            const result = s1 > s2 ? 1 : 0;
+            const oldRating1 = data.players[player1].rating;
+            const oldRating2 = data.players[player2].rating;
+            
+            // ELOを計算
+            const { newRatingA, newRatingB } = calculateELO(oldRating1, oldRating2, result);
+            
+            // レートを更新
+            data.players[player1].rating = newRatingA;
+            data.players[player2].rating = newRatingB;
+            
+            // 勝敗を記録
+            if (result === 1) {
+                data.players[player1].wins += 1;
+                data.players[player2].losses += 1;
+            } else {
+                data.players[player1].losses += 1;
+                data.players[player2].wins += 1;
+            }
+            
+            // 試合記録を追加
+            data.matches.push({
+                player1,
+                score1: s1,
+                player2,
+                score2: s2,
+                date: new Date().toLocaleString('ja-JP'),
+                ratingChange1: newRatingA - oldRating1,
+                ratingChange2: newRatingB - oldRating2
+            });
+            
+            // 保存
+            saveData(data);
+            
+            // フォームをクリア
+            document.getElementById('player1').value = '';
+            document.getElementById('player2').value = '';
+            document.getElementById('score1').value = '';
+            document.getElementById('score2').value = '';
+            
+            // 成功メッセージ
+            const msg = document.getElementById('errorGeneral');
+            msg.textContent = '✓ 試合を記録しました！';
+            msg.className = 'error success';
+            setTimeout(() => msg.textContent = '', 2000);
+        }
+
+        // ランキングを更新
+        function updateRanking() {
+            const data = loadData();
+            const players = Object.entries(data.players)
+                .map(([name, stats]) => ({ name, ...stats }))
+                .sort((a, b) => b.rating - a.rating);
+            
+            // 統計情報
+            const totalMatches = Object.values(data.players).reduce((sum, p) => sum + p.wins + p.losses, 0);
+            const totalPlayers = Object.keys(data.players).length;
+            
+            let statsHTML = `
+                <div class="stat-card">
+                    <div class="stat-label">登録選手</div>
+                    <div class="stat-value">${totalPlayers}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">総試合数</div>
+                    <div class="stat-value">${totalMatches}</div>
+                </div>
+            `;
+            document.getElementById('stats').innerHTML = statsHTML;
+            
+            // ランキング表
+            if (players.length === 0) {
+                document.getElementById('ranking-container').innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏓</div><p>試合を記録してランキングを作成します</p></div>';
+                return;
+            }
+            
+            let html = '';
+            players.forEach((p, i) => {
+                const total = p.wins + p.losses;
+                const winRate = total > 0 ? ((p.wins / total) * 100).toFixed(1) : '-';
+                const medals = ['🥇', '🥈', '🥉'];
+                const medal = medals[i] || '';
+                const badgeClass = i < 3 ? `rank-${i + 1}` : 'rank-other';
+                
+                html += `<tr>
+                    <td><span class="rank-badge ${badgeClass}">${i + 1}</span></td>
+                    <td><div class="player-name"><span class="medal">${medal}</span>${p.name}</div></td>
+                    <td style="text-align: right;"><span class="rating-value">${p.rating}</span></td>
+                    <td style="text-align: center;">${total}</td>
+                    <td style="text-align: center;">${winRate}%</td>
+                </tr>`;
+            });
+            document.getElementById('ranking-body').innerHTML = html;
+        }
+
+        // 履歴を更新
+        function updateHistory() {
+            const data = loadData();
+            const matches = [...data.matches].reverse();
+            
+            if (matches.length === 0) {
+                document.getElementById('match-list').innerHTML = '<div class="empty-state"><div class="empty-state-icon">📜</div><p>試合履歴がまだありません</p></div>';
+                return;
+            }
+            
+            let html = '';
+            matches.forEach(m => {
+                const change1Class = m.ratingChange1 > 0 ? 'rating-up' : 'rating-down';
+                const change1Text = m.ratingChange1 > 0 ? `+${m.ratingChange1}` : `${m.ratingChange1}`;
+                const change2Class = m.ratingChange2 > 0 ? 'rating-up' : 'rating-down';
+                const change2Text = m.ratingChange2 > 0 ? `+${m.ratingChange2}` : `${m.ratingChange2}`;
+                
+                html += `<div class="match-item">
+                    <div class="match-header">
+                        <span class="match-score">${m.player1} ${m.score1} - ${m.score2} ${m.player2}</span>
+                        <span class="match-time">${m.date}</span>
+                    </div>
+                    <div class="match-details">
+                        <span class="${change1Class}">${m.player1}: ${change1Text}</span>
+                        <span class="${change2Class}">${m.player2}: ${change2Text}</span>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('match-list').innerHTML = html;
+        }
+    </script>
+</body>
+</html>
