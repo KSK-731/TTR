@@ -162,6 +162,17 @@
             transform: scale(0.98);
         }
         
+        .button-danger {
+            background: #e53935;
+            color: white;
+            font-size: 12px;
+            padding: 8px 12px;
+            width: auto;
+        }
+        .button-danger:hover {
+            background: #c62828;
+        }
+        
         .error {
             color: #e53935;
             font-size: 13px;
@@ -277,6 +288,7 @@
             border-radius: 8px;
             border: 1px solid #f0f0f0;
             box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            position: relative;
         }
         .match-header {
             display: flex;
@@ -299,6 +311,12 @@
             display: flex;
             gap: 16px;
             font-size: 12px;
+            margin-bottom: 12px;
+        }
+        .match-delete {
+            text-align: right;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
         }
         
         .empty-state {
@@ -310,6 +328,16 @@
             font-size: 48px;
             margin-bottom: 1rem;
             opacity: 0.5;
+        }
+
+        .info-box {
+            background: #f0f0ff;
+            border-left: 4px solid #667eea;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            font-size: 13px;
+            color: #333;
         }
         
         @media (max-width: 600px) {
@@ -336,6 +364,10 @@
             .stat-value {
                 font-size: 24px;
             }
+            .match-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
@@ -354,6 +386,9 @@
         <!-- 試合記録タブ -->
         <div id="matches-tab" class="tab-content active">
             <h2>試合結果を記録</h2>
+            <div class="info-box">
+                💡 <strong>セット数に応じてレート変動が変わります：</strong> 接戦（1セット差）ほどレート変動が小さく、大差（3セット以上差）ほど大きくなります
+            </div>
             <div class="form-group">
                 <label>選手1の名前</label>
                 <input type="text" id="player1" placeholder="例：太郎" autocomplete="off" oninput="showAutocomplete('player1')">
@@ -362,11 +397,11 @@
             </div>
             <div class="form-row">
                 <div class="form-group">
-                    <label>選手1のスコア（セット数）</label>
+                    <label>選手1のセット数</label>
                     <input type="number" id="score1" placeholder="例：3" autocomplete="off" min="0">
                 </div>
                 <div class="form-group">
-                    <label>選手2のスコア（セット数）</label>
+                    <label>選手2のセット数</label>
                     <input type="number" id="score2" placeholder="例：1" autocomplete="off" min="0">
                 </div>
             </div>
@@ -402,7 +437,7 @@
 
         <!-- 履歴タブ -->
         <div id="history-tab" class="tab-content">
-            <h2>試合履歴</h2>
+            <h2>試合履歴（削除可能）</h2>
             <div class="match-list" id="match-list"></div>
         </div>
     </div>
@@ -484,6 +519,19 @@
             else if (tab === 'history') updateHistory();
         }
 
+        // セット数に応じたK係数を計算
+        function calculateKFactor(score1, score2) {
+            const diff = Math.abs(score1 - score2);
+            
+            if (diff === 1) {
+                return 16;  // 接戦（1セット差）
+            } else if (diff === 2) {
+                return 24;  // 中程度の差
+            } else {
+                return 32;  // 大差（3セット以上差）
+            }
+        }
+
         // ELO式でレートを計算
         function calculateELO(ratingA, ratingB, resultA, K = 32) {
             const EA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
@@ -518,7 +566,7 @@
                 return;
             }
             if (!score1 || !score2) {
-                document.getElementById('errorGeneral').textContent = 'スコアを入力してください';
+                document.getElementById('errorGeneral').textContent = 'セット数を入力してください';
                 return;
             }
             if (player1 === player2) {
@@ -530,11 +578,11 @@
             const s2 = parseInt(score2);
             
             if (isNaN(s1) || isNaN(s2)) {
-                document.getElementById('errorGeneral').textContent = 'スコアは数値で入力してください';
+                document.getElementById('errorGeneral').textContent = 'セット数は数値で入力してください';
                 return;
             }
             if (s1 < 0 || s2 < 0) {
-                document.getElementById('errorGeneral').textContent = 'スコアは0以上の数値を入力してください';
+                document.getElementById('errorGeneral').textContent = 'セット数は0以上の数値を入力してください';
                 return;
             }
             if (s1 === s2) {
@@ -555,7 +603,9 @@
             const oldRating1 = data.players[player1].rating;
             const oldRating2 = data.players[player2].rating;
             
-            const { newRatingA, newRatingB } = calculateELO(oldRating1, oldRating2, result);
+            // セット数に応じたK係数を使用
+            const K = calculateKFactor(s1, s2);
+            const { newRatingA, newRatingB } = calculateELO(oldRating1, oldRating2, result, K);
             
             data.players[player1].rating = newRatingA;
             data.players[player2].rating = newRatingB;
@@ -589,6 +639,44 @@
             msg.textContent = '✓ 試合を記録しました！';
             msg.className = 'error success';
             setTimeout(() => msg.textContent = '', 2000);
+        }
+
+        // 試合を削除
+        function deleteMatch(index) {
+            if (!confirm('この試合を削除しますか？レートも戻ります。')) {
+                return;
+            }
+            
+            let data = loadData();
+            const match = data.matches[index];
+            
+            // レート変動を元に戻す
+            if (data.players[match.player1]) {
+                data.players[match.player1].rating -= match.ratingChange1;
+                if (match.score1 > match.score2) {
+                    data.players[match.player1].wins -= 1;
+                } else {
+                    data.players[match.player1].losses -= 1;
+                }
+            }
+            
+            if (data.players[match.player2]) {
+                data.players[match.player2].rating -= match.ratingChange2;
+                if (match.score2 > match.score1) {
+                    data.players[match.player2].wins -= 1;
+                } else {
+                    data.players[match.player2].losses -= 1;
+                }
+            }
+            
+            // 試合記録を削除
+            data.matches.splice(index, 1);
+            
+            saveData(data);
+            updateHistory();
+            updateRanking();
+            
+            alert('試合を削除しました');
         }
 
         // ランキングを更新
@@ -648,7 +736,8 @@
             }
             
             let html = '';
-            matches.forEach(m => {
+            matches.forEach((m, displayIndex) => {
+                const actualIndex = data.matches.length - 1 - displayIndex;
                 const change1Class = m.ratingChange1 > 0 ? 'rating-up' : 'rating-down';
                 const change1Text = m.ratingChange1 > 0 ? `+${m.ratingChange1}` : `${m.ratingChange1}`;
                 const change2Class = m.ratingChange2 > 0 ? 'rating-up' : 'rating-down';
@@ -662,6 +751,9 @@
                     <div class="match-details">
                         <span class="${change1Class}">${m.player1}: ${change1Text}</span>
                         <span class="${change2Class}">${m.player2}: ${change2Text}</span>
+                    </div>
+                    <div class="match-delete">
+                        <button class="button-danger" onclick="deleteMatch(${actualIndex})">🗑️ 削除</button>
                     </div>
                 </div>`;
             });
